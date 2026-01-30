@@ -297,7 +297,7 @@ public class MainActivity extends AppCompatActivity
 		UsbManager manager = (UsbManager) getSystemService(Context.USB_SERVICE);
 		List<UsbSerialDriver> availableDrivers = UsbSerialProber.getDefaultProber().findAllDrivers(manager);
 		if (availableDrivers.isEmpty()) {
-			Toast.makeText(MainActivity.this, "No COM Drivers available", Toast.LENGTH_LONG).show();
+			Toast.makeText(MainActivity.this, "No USB COM Devices available", Toast.LENGTH_LONG).show();
 			return;
 		}
 
@@ -310,12 +310,12 @@ public class MainActivity extends AppCompatActivity
 			intent.setPackage(this.getPackageName());
 			PendingIntent usbPermissionIntent = PendingIntent.getBroadcast(this, 0, intent, flags);
 			manager.requestPermission(driver.getDevice(), usbPermissionIntent);
-			Toast.makeText(MainActivity.this, "COM connection is null", Toast.LENGTH_LONG).show();
+			Toast.makeText(MainActivity.this, "Give USB Permission and try again.", Toast.LENGTH_LONG).show();
 			return;
 		}
 
 		port = driver.getPorts().get(0); // Most devices have just one port (port 0)
-		Toast.makeText(MainActivity.this, String.format(Locale.US, "Found %s",port.getDevice().getProductName()), Toast.LENGTH_SHORT).show();
+		//Toast.makeText(MainActivity.this, String.format(Locale.US, "Found %s",port.getDevice().getProductName()), Toast.LENGTH_SHORT).show();
 		try {
 			port.open(connection);
 			port.setParameters(9600, 8, UsbSerialPort.STOPBITS_1, UsbSerialPort.PARITY_NONE);
