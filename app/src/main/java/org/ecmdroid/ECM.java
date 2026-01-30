@@ -24,6 +24,8 @@ import android.content.Context;
 import android.text.format.DateFormat;
 import android.util.Log;
 
+import com.hoho.android.usbserial.driver.UsbSerialPort;
+import com.hoho.android.usbserial.util.SerialInputOutputManager;
 import org.ecmdroid.Constants.DataSource;
 import org.ecmdroid.Constants.Variables;
 import org.ecmdroid.EEPROM.Page;
@@ -38,6 +40,7 @@ import java.io.PipedOutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.text.ParseException;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.LinkedList;
@@ -69,7 +72,22 @@ import de.kai_morich.simple_bluetooth_le_terminal.SerialSocket;
  * data can be accessed, you must call {@link ECM#setupEEPROM()}.
  * </p>
  */
-public class ECM {
+public class ECM implements SerialInputOutputManager.Listener {
+	@Override
+	public void onNewData(byte[] data) {
+		for(int i = 0;i<data.length;i++){
+			Log.w(TAG, "onNewData uartBufferPosition: " + uartBufferPosition);
+			Log.w(TAG, "onNewData i: " + i);
+			Log.w(TAG, "onNewData data[i]: " + data[i]);
+			uartBuffer[uartBufferPosition] = data[i];
+			uartBufferPosition++;
+		}
+		Log.w(TAG, "onNewData readBufferData: " + Arrays.toString(data));
+		Log.w(TAG, "onNewData readBufferData: " + Arrays.toString(uartBuffer));
+	}
+	@Override
+	public void onRunError(Exception e) {
+	}
 
 	/**
 	 * ECM Type. DDFI-1 (Tubers), DDFI-2 (XBs -2007), DDFI-3 (XB 2008-, 1125R/CR)
@@ -118,10 +136,34 @@ public class ECM {
 	private static ECM singleton;
 
 	private byte[] mReceiveBuffer = new byte[256];
-
+	private byte[] uartBuffer = new byte[256];
+	private int uartBufferPosition = 0;
 	private boolean connected;
 	private Object socket;
-	private InputStream in;
+	private InputStream in = new InputStream() {
+        @Override
+        public int read() throws IOException {
+            byte b = uartBuffer[0];
+            System.arraycopy(uartBuffer, 1, uartBuffer, 0, 255);
+            uartBufferPosition--;
+            return b;
+        }
+
+        @Override
+        public int read(byte[] b,int off,int len) throws IOException {
+            byte[] bs = new byte[len];
+            System.arraycopy(uartBuffer, 0, bs, 0, len);
+            System.arraycopy(uartBuffer, len, uartBuffer, 0, 255-len);
+            uartBufferPosition-=len;
+			System.arraycopy(bs, 0, mReceiveBuffer, 0 + off, len);
+            return bs.length;
+        }
+
+        public int available() throws IOException {
+            Log.w(TAG, "available: " + uartBufferPosition);
+            return uartBufferPosition;
+        }
+    };
 	private OutputStream out;
 	private EEPROM eeprom;
 	private byte[] rtData;
@@ -169,6 +211,50 @@ public class ECM {
 		connected = true;
 	}
 
+	public void connect(UsbSerialPort uart, Protocol protocol) throws IOException {
+		try {
+			SerialInputOutputManager usbIoManager = new SerialInputOutputManager(uart, this);
+			usbIoManager.start();
+			this.in = new InputStream() {
+				@Override
+				public int read() throws IOException {
+					byte b = uartBuffer[0];
+					System.arraycopy(uartBuffer, 1, uartBuffer, 0, 255);
+					uartBufferPosition--;
+					return b & 0xFF;
+				}
+				@Override
+				public int read(byte[] b,int off,int len) throws IOException {
+					byte[] bs = new byte[len];
+					System.arraycopy(uartBuffer, 0, bs, 0, len);
+					System.arraycopy(uartBuffer, len, uartBuffer, 0, 255-len);
+					uartBufferPosition-=len;
+                    System.arraycopy(bs, 0, mReceiveBuffer, 0 + off, len);
+					return bs.length;
+				}
+				public int available() throws IOException {
+					Log.w(TAG, "available: " + uartBufferPosition);
+					return uartBufferPosition;
+				}
+			};
+			this.out = new OutputStream() {
+				@Override
+				public void write(int i) throws IOException {
+					uart.write(new byte[]{(byte) i},2000);
+				}
+				@Override
+				public void write(byte[] b) throws IOException {
+					uart.write(b,2000);
+				}
+			};
+		} catch (Exception e) {
+			Log.w(TAG, "Unable to connect. ", e);
+			throw e;
+		}
+		this.protocol = protocol;
+		PDU.setProtocol(protocol);
+		connected = true;
+	}
 	/**
 	 * Connect to BLE device
 	 */

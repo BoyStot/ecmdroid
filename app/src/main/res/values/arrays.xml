@@ -4,10 +4,12 @@
 		<item>Classic Bluetooth</item>
 		<item>Bluetooth LE</item>
 		<item>TCP/IP</item>
+		<item>USB COM Port</item>
 	</array>
 	<array name="connectionValues">
 		<item>BT</item>
 		<item>BLE</item>
 		<item>TCP</item>
+		<item>COM</item>
 	</array>
 </resources>
