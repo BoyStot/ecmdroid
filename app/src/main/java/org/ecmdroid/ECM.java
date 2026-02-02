@@ -136,7 +136,7 @@ public class ECM implements SerialInputOutputManager.Listener {
 	private static ECM singleton;
 
 	private byte[] mReceiveBuffer = new byte[256];
-	private byte[] uartBuffer = new byte[512]; // TODO Maybe just 256 if errors persist
+	private byte[] uartBuffer = new byte[512];
 	private int uartBufferPosition = 0;
 	SerialInputOutputManager usbIoManager;
 	private boolean connected;
