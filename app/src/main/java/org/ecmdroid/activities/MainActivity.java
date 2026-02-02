@@ -292,7 +292,7 @@ public class MainActivity extends AppCompatActivity
 		alert.show();
 	}
 
-	private void showCOMDevices() {
+	private void findCOMDevice() {
 		// Find all available drivers from attached devices.
 		UsbManager manager = (UsbManager) getSystemService(Context.USB_SERVICE);
 		List<UsbSerialDriver> availableDrivers = UsbSerialProber.getDefaultProber().findAllDrivers(manager);
@@ -311,6 +311,7 @@ public class MainActivity extends AppCompatActivity
 			PendingIntent usbPermissionIntent = PendingIntent.getBroadcast(this, 0, intent, flags);
 			manager.requestPermission(driver.getDevice(), usbPermissionIntent);
 			Toast.makeText(MainActivity.this, "Give USB Permission and try again.", Toast.LENGTH_LONG).show();
+			//TODO make this stick between runs.
 			return;
 		}
 
@@ -356,7 +357,7 @@ public class MainActivity extends AppCompatActivity
 			Fragment fragment = new DevicesFragment();
 			getFragmentManager().beginTransaction().replace(R.id.content_frame, fragment, "devices").addToBackStack("blescan").commit();
 		} else if ("COM".equals(connectionType)) {
-			showCOMDevices();
+			findCOMDevice();
 		} else {
 			String host = prefs.getString("tcp_host", null);
 			int port = 0;
@@ -375,23 +376,22 @@ public class MainActivity extends AppCompatActivity
 
 	public void connect(BluetoothDevice bluetoothDevice) {
 		Log.i(TAG, "Device selected: " + bluetoothDevice);
-
 		new ConnectTask(bluetoothDevice, getProtocol(), false).execute();
 	}
 
-	public void connect(UsbSerialPort uartDevice) {
-		Log.i(TAG, "Device selected: " + uartDevice);
-		new ConnectTask(uartDevice, getProtocol()).execute();
-	}
 	public void connectBLE(BluetoothDevice bluetoothDevice) {
 		Log.i(TAG, "BLE Device selected: " + bluetoothDevice);
-
 		new ConnectTask(bluetoothDevice, getProtocol(), true).execute();
 	}
 
 	private void connect(String host, int port) {
 		Log.i(TAG, "TCP Connection to " + host + ":" + port);
 		new ConnectTask(host, port, getProtocol()).execute();
+	}
+
+	public void connect(UsbSerialPort uartDevice) {
+		Log.i(TAG, "Device selected: " + uartDevice);
+		new ConnectTask(uartDevice, getProtocol()).execute();
 	}
 
 	private ECM.Protocol getProtocol() {

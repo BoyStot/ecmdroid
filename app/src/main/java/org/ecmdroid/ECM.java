@@ -73,20 +73,20 @@ import de.kai_morich.simple_bluetooth_le_terminal.SerialSocket;
  * </p>
  */
 public class ECM implements SerialInputOutputManager.Listener {
+
+	/**
+	 * SerialInputOutputManager Listener functions
+	 */
 	@Override
 	public void onNewData(byte[] data) {
-		for(int i = 0;i<data.length;i++){
-			Log.w(TAG, "onNewData uartBufferPosition: " + uartBufferPosition);
-			Log.w(TAG, "onNewData i: " + i);
-			Log.w(TAG, "onNewData data[i]: " + data[i]);
-			uartBuffer[uartBufferPosition] = data[i];
-			uartBufferPosition++;
-		}
-		Log.w(TAG, "onNewData readBufferData: " + Arrays.toString(data));
-		Log.w(TAG, "onNewData readBufferData: " + Arrays.toString(uartBuffer));
+        for (byte datum : data) {
+            uartBuffer[uartBufferPosition] = datum;
+            uartBufferPosition++;
+        }
 	}
 	@Override
 	public void onRunError(Exception e) {
+		Log.w(TAG, "onNewData onRunError: " + e.getMessage());
 	}
 
 	/**
@@ -136,34 +136,12 @@ public class ECM implements SerialInputOutputManager.Listener {
 	private static ECM singleton;
 
 	private byte[] mReceiveBuffer = new byte[256];
-	private byte[] uartBuffer = new byte[256];
+	private byte[] uartBuffer = new byte[512]; // TODO Maybe just 256 if errors persist
 	private int uartBufferPosition = 0;
+	SerialInputOutputManager usbIoManager;
 	private boolean connected;
 	private Object socket;
-	private InputStream in = new InputStream() {
-        @Override
-        public int read() throws IOException {
-            byte b = uartBuffer[0];
-            System.arraycopy(uartBuffer, 1, uartBuffer, 0, 255);
-            uartBufferPosition--;
-            return b;
-        }
-
-        @Override
-        public int read(byte[] b,int off,int len) throws IOException {
-            byte[] bs = new byte[len];
-            System.arraycopy(uartBuffer, 0, bs, 0, len);
-            System.arraycopy(uartBuffer, len, uartBuffer, 0, 255-len);
-            uartBufferPosition-=len;
-			System.arraycopy(bs, 0, mReceiveBuffer, 0 + off, len);
-            return bs.length;
-        }
-
-        public int available() throws IOException {
-            Log.w(TAG, "available: " + uartBufferPosition);
-            return uartBufferPosition;
-        }
-    };
+	private InputStream in;
 	private OutputStream out;
 	private EEPROM eeprom;
 	private byte[] rtData;
@@ -213,7 +191,7 @@ public class ECM implements SerialInputOutputManager.Listener {
 
 	public void connect(UsbSerialPort uart, Protocol protocol) throws IOException {
 		try {
-			SerialInputOutputManager usbIoManager = new SerialInputOutputManager(uart, this);
+			usbIoManager = new SerialInputOutputManager(uart, this);
 			usbIoManager.start();
 			this.in = new InputStream() {
 				@Override
@@ -221,7 +199,7 @@ public class ECM implements SerialInputOutputManager.Listener {
 					byte b = uartBuffer[0];
 					System.arraycopy(uartBuffer, 1, uartBuffer, 0, 255);
 					uartBufferPosition--;
-					return b & 0xFF;
+					return b;
 				}
 				@Override
 				public int read(byte[] b,int off,int len) throws IOException {
@@ -229,11 +207,10 @@ public class ECM implements SerialInputOutputManager.Listener {
 					System.arraycopy(uartBuffer, 0, bs, 0, len);
 					System.arraycopy(uartBuffer, len, uartBuffer, 0, 255-len);
 					uartBufferPosition-=len;
-                    System.arraycopy(bs, 0, mReceiveBuffer, 0 + off, len);
+                    System.arraycopy(bs, 0, mReceiveBuffer, off, len);
 					return bs.length;
 				}
 				public int available() throws IOException {
-					Log.w(TAG, "available: " + uartBufferPosition);
 					return uartBufferPosition;
 				}
 			};
@@ -350,15 +327,22 @@ public class ECM implements SerialInputOutputManager.Listener {
 	 * @throws IOException
 	 */
 	public void disconnect() throws IOException {
-		if (connected && socket != null) {
-			if (socket instanceof BluetoothSocket) {
-				((BluetoothSocket) socket).close();
-			} else if (socket instanceof Socket) {
-				((Socket) socket).close();
-			} else if (socket instanceof SerialSocket) {
-				((SerialSocket)socket).disconnect();
+		if (connected) {
+			if(socket != null){
+				if (socket instanceof BluetoothSocket) {
+					((BluetoothSocket) socket).close();
+				} else if (socket instanceof Socket) {
+					((Socket) socket).close();
+				} else if (socket instanceof SerialSocket) {
+					((SerialSocket)socket).disconnect();
+				}
+				socket = null;
+			} else {
+				// USB uart
+				usbIoManager.stop();
+				uartBufferPosition = 0;
+				uartBuffer = new byte[256];
 			}
-			socket = null;
 		}
 		connected = false;
 		rtData = null;
