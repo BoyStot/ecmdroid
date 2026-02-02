@@ -24,6 +24,9 @@ import android.content.Context;
 import android.text.format.DateFormat;
 import android.util.Log;
 
+import com.hoho.android.usbserial.driver.UsbSerialPort;
+import com.hoho.android.usbserial.util.SerialInputOutputManager;
+
 import org.ecmdroid.Constants.DataSource;
 import org.ecmdroid.Constants.Variables;
 import org.ecmdroid.EEPROM.Page;
@@ -118,7 +121,7 @@ public class ECM {
 	private static ECM singleton;
 
 	private byte[] mReceiveBuffer = new byte[256];
-
+	private SerialInputOutputManager usbIoManager;
 	private boolean connected;
 	private Object socket;
 	private InputStream in;
@@ -169,6 +172,50 @@ public class ECM {
 		connected = true;
 	}
 
+	public void connect(UsbSerialPort uart, Protocol protocol) throws IOException {
+		try {
+
+			final PipedOutputStream uartOutPipe = new PipedOutputStream();
+			this.in = new PipedInputStream(uartOutPipe);
+			usbIoManager = new SerialInputOutputManager(uart, new SerialInputOutputManager.Listener() {
+				/**
+				 * SerialInputOutputManager Listener functions
+				 */
+				@Override
+				public void onNewData(byte[] data) {
+					try {
+						uartOutPipe.write(data);
+					} catch (IOException e) {
+						Log.e(TAG, "IO Exception while trying to write to UART", e);
+						throw new RuntimeException(e);
+					}
+				}
+
+				@Override
+				public void onRunError(Exception e) {
+					Log.e(TAG, "UART read/write run error", e);
+				}
+			});
+			this.out = new OutputStream() {
+				@Override
+				public void write(int i) throws IOException {
+					write(new byte[]{(byte) i});
+				}
+
+				@Override
+				public void write(byte[] b) throws IOException {
+					uart.write(b, 2000);
+				}
+			};
+			usbIoManager.start();
+		} catch (Exception e) {
+			Log.w(TAG, "Unable to connect to USB UART", e);
+			throw e;
+		}
+		this.protocol = protocol;
+		PDU.setProtocol(protocol);
+		connected = true;
+	}
 	/**
 	 * Connect to BLE device
 	 */
@@ -264,18 +311,37 @@ public class ECM {
 	 * @throws IOException
 	 */
 	public void disconnect() throws IOException {
-		if (connected && socket != null) {
-			if (socket instanceof BluetoothSocket) {
-				((BluetoothSocket) socket).close();
-			} else if (socket instanceof Socket) {
-				((Socket) socket).close();
-			} else if (socket instanceof SerialSocket) {
-				((SerialSocket)socket).disconnect();
+		if (connected) {
+			try {
+				if (socket != null) {
+					try {
+						if (socket instanceof BluetoothSocket) {
+							((BluetoothSocket) socket).close();
+						} else if (socket instanceof Socket) {
+							((Socket) socket).close();
+						} else if (socket instanceof SerialSocket) {
+							((SerialSocket) socket).disconnect();
+						}
+					} finally {
+						socket = null;
+					}
+				} else {
+					// USB uart
+					try {
+						if (usbIoManager != null) {
+							usbIoManager.stop();
+						}
+					} finally {
+						usbIoManager = null;
+					}
+				}
+			} finally {
+				this.in = null;
+				this.out = null;
+				connected = false;
+				rtData = null;
 			}
-			socket = null;
 		}
-		connected = false;
-		rtData = null;
 	}
 
 	/**
@@ -311,6 +377,7 @@ public class ECM {
 		try {
 			read(mReceiveBuffer, 0, 6, DEFAULT_TIMEOUT);
 			if (mReceiveBuffer[0] != PDU.SOH && mReceiveBuffer[4] != PDU.EOH && mReceiveBuffer[5] != PDU.SOT) {
+
 				throw new IOException("Invalid Header received.");
 			}
 			int len = mReceiveBuffer[3] & 0xff;
