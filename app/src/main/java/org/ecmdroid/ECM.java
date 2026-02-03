@@ -40,7 +40,6 @@ import java.io.PipedOutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.text.ParseException;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.LinkedList;
@@ -49,6 +48,7 @@ import java.util.UUID;
 
 import de.kai_morich.simple_bluetooth_le_terminal.SerialListener;
 import de.kai_morich.simple_bluetooth_le_terminal.SerialSocket;
+
 
 /**
  * This class represents the main interface to your Buell ECM. Communication
@@ -72,22 +72,7 @@ import de.kai_morich.simple_bluetooth_le_terminal.SerialSocket;
  * data can be accessed, you must call {@link ECM#setupEEPROM()}.
  * </p>
  */
-public class ECM implements SerialInputOutputManager.Listener {
-
-	/**
-	 * SerialInputOutputManager Listener functions
-	 */
-	@Override
-	public void onNewData(byte[] data) {
-        for (byte datum : data) {
-            uartBuffer[uartBufferPosition] = datum;
-            uartBufferPosition++;
-        }
-	}
-	@Override
-	public void onRunError(Exception e) {
-		Log.w(TAG, "onNewData onRunError: " + e.getMessage());
-	}
+public class ECM {
 
 	/**
 	 * ECM Type. DDFI-1 (Tubers), DDFI-2 (XBs -2007), DDFI-3 (XB 2008-, 1125R/CR)
@@ -136,9 +121,8 @@ public class ECM implements SerialInputOutputManager.Listener {
 	private static ECM singleton;
 
 	private byte[] mReceiveBuffer = new byte[256];
-	private byte[] uartBuffer = new byte[512];
-	private int uartBufferPosition = 0;
-	SerialInputOutputManager usbIoManager;
+	private LinkedList<Object> uartBuffer;
+	private SerialInputOutputManager usbIoManager;
 	private boolean connected;
 	private Object socket;
 	private InputStream in;
@@ -191,27 +175,36 @@ public class ECM implements SerialInputOutputManager.Listener {
 
 	public void connect(UsbSerialPort uart, Protocol protocol) throws IOException {
 		try {
-			usbIoManager = new SerialInputOutputManager(uart, this);
-			usbIoManager.start();
+
+			usbIoManager = new SerialInputOutputManager(uart, new SerialInputOutputManager.Listener() {
+				/**
+				 * SerialInputOutputManager Listener functions
+				 */
+				@Override
+				public void onNewData(byte[] data) {
+                    for (byte datum : data) {
+                        uartBuffer.add(datum);
+                    }
+				}
+				@Override
+				public void onRunError(Exception e) {
+					Log.e(TAG, "onNewData onRunError: " + e.getMessage());
+				}
+			});
 			this.in = new InputStream() {
 				@Override
-				public int read() throws IOException {
-					byte b = uartBuffer[0];
-					System.arraycopy(uartBuffer, 1, uartBuffer, 0, 255);
-					uartBufferPosition--;
-					return b;
+				public int read() {
+					return (byte)uartBuffer.remove();
 				}
 				@Override
-				public int read(byte[] b,int off,int len) throws IOException {
-					byte[] bs = new byte[len];
-					System.arraycopy(uartBuffer, 0, bs, 0, len);
-					System.arraycopy(uartBuffer, len, uartBuffer, 0, 255-len);
-					uartBufferPosition-=len;
-                    System.arraycopy(bs, 0, mReceiveBuffer, off, len);
-					return bs.length;
+				public int read(byte[] b,int off,int len) {
+					for(int i=0;i<len;i++){
+						mReceiveBuffer[off+i] = (byte)uartBuffer.remove();
+					}
+					return len;
 				}
-				public int available() throws IOException {
-					return uartBufferPosition;
+				public int available() {
+					return uartBuffer.size();
 				}
 			};
 			this.out = new OutputStream() {
@@ -224,6 +217,8 @@ public class ECM implements SerialInputOutputManager.Listener {
 					uart.write(b,2000);
 				}
 			};
+			uartBuffer = new LinkedList<>();
+			usbIoManager.start();
 		} catch (Exception e) {
 			Log.w(TAG, "Unable to connect. ", e);
 			throw e;
@@ -340,8 +335,6 @@ public class ECM implements SerialInputOutputManager.Listener {
 			} else {
 				// USB uart
 				usbIoManager.stop();
-				uartBufferPosition = 0;
-				uartBuffer = new byte[256];
 			}
 		}
 		connected = false;
@@ -381,6 +374,7 @@ public class ECM implements SerialInputOutputManager.Listener {
 		try {
 			read(mReceiveBuffer, 0, 6, DEFAULT_TIMEOUT);
 			if (mReceiveBuffer[0] != PDU.SOH && mReceiveBuffer[4] != PDU.EOH && mReceiveBuffer[5] != PDU.SOT) {
+
 				throw new IOException("Invalid Header received.");
 			}
 			int len = mReceiveBuffer[3] & 0xff;

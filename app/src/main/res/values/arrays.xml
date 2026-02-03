@@ -4,7 +4,7 @@
 		<item>Classic Bluetooth</item>
 		<item>Bluetooth LE</item>
 		<item>TCP/IP</item>
-		<item>USB COM Port</item>
+		<item>USB-to-serial Adapter</item>
 	</array>
 	<array name="connectionValues">
 		<item>BT</item>

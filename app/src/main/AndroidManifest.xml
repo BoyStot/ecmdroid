@@ -23,6 +23,7 @@
         tools:ignore="GoogleAppIndexingWarning">
         <activity
             android:name=".activities.MainActivity"
+            android:directBootAware="true"
             android:exported="true"
             android:theme="@style/AppTheme.NoActionBar">
             <intent-filter>
