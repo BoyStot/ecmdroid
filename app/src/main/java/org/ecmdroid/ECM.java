@@ -24,6 +24,8 @@ import android.content.Context;
 import android.text.format.DateFormat;
 import android.util.Log;
 
+import com.hoho.android.usbserial.driver.UsbSerialPort;
+import com.hoho.android.usbserial.util.SerialInputOutputManager;
 import org.ecmdroid.Constants.DataSource;
 import org.ecmdroid.Constants.Variables;
 import org.ecmdroid.EEPROM.Page;
@@ -38,6 +40,7 @@ import java.io.PipedOutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.text.ParseException;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.LinkedList;
@@ -69,7 +72,22 @@ import de.kai_morich.simple_bluetooth_le_terminal.SerialSocket;
  * data can be accessed, you must call {@link ECM#setupEEPROM()}.
  * </p>
  */
-public class ECM {
+public class ECM implements SerialInputOutputManager.Listener {
+
+	/**
+	 * SerialInputOutputManager Listener functions
+	 */
+	@Override
+	public void onNewData(byte[] data) {
+        for (byte datum : data) {
+            uartBuffer[uartBufferPosition] = datum;
+            uartBufferPosition++;
+        }
+	}
+	@Override
+	public void onRunError(Exception e) {
+		Log.w(TAG, "onNewData onRunError: " + e.getMessage());
+	}
 
 	/**
 	 * ECM Type. DDFI-1 (Tubers), DDFI-2 (XBs -2007), DDFI-3 (XB 2008-, 1125R/CR)
@@ -118,7 +136,9 @@ public class ECM {
 	private static ECM singleton;
 
 	private byte[] mReceiveBuffer = new byte[256];
-
+	private byte[] uartBuffer = new byte[512];
+	private int uartBufferPosition = 0;
+	SerialInputOutputManager usbIoManager;
 	private boolean connected;
 	private Object socket;
 	private InputStream in;
@@ -169,6 +189,49 @@ public class ECM {
 		connected = true;
 	}
 
+	public void connect(UsbSerialPort uart, Protocol protocol) throws IOException {
+		try {
+			usbIoManager = new SerialInputOutputManager(uart, this);
+			usbIoManager.start();
+			this.in = new InputStream() {
+				@Override
+				public int read() throws IOException {
+					byte b = uartBuffer[0];
+					System.arraycopy(uartBuffer, 1, uartBuffer, 0, 255);
+					uartBufferPosition--;
+					return b;
+				}
+				@Override
+				public int read(byte[] b,int off,int len) throws IOException {
+					byte[] bs = new byte[len];
+					System.arraycopy(uartBuffer, 0, bs, 0, len);
+					System.arraycopy(uartBuffer, len, uartBuffer, 0, 255-len);
+					uartBufferPosition-=len;
+                    System.arraycopy(bs, 0, mReceiveBuffer, off, len);
+					return bs.length;
+				}
+				public int available() throws IOException {
+					return uartBufferPosition;
+				}
+			};
+			this.out = new OutputStream() {
+				@Override
+				public void write(int i) throws IOException {
+					uart.write(new byte[]{(byte) i},2000);
+				}
+				@Override
+				public void write(byte[] b) throws IOException {
+					uart.write(b,2000);
+				}
+			};
+		} catch (Exception e) {
+			Log.w(TAG, "Unable to connect. ", e);
+			throw e;
+		}
+		this.protocol = protocol;
+		PDU.setProtocol(protocol);
+		connected = true;
+	}
 	/**
 	 * Connect to BLE device
 	 */
@@ -264,15 +327,22 @@ public class ECM {
 	 * @throws IOException
 	 */
 	public void disconnect() throws IOException {
-		if (connected && socket != null) {
-			if (socket instanceof BluetoothSocket) {
-				((BluetoothSocket) socket).close();
-			} else if (socket instanceof Socket) {
-				((Socket) socket).close();
-			} else if (socket instanceof SerialSocket) {
-				((SerialSocket)socket).disconnect();
+		if (connected) {
+			if(socket != null){
+				if (socket instanceof BluetoothSocket) {
+					((BluetoothSocket) socket).close();
+				} else if (socket instanceof Socket) {
+					((Socket) socket).close();
+				} else if (socket instanceof SerialSocket) {
+					((SerialSocket)socket).disconnect();
+				}
+				socket = null;
+			} else {
+				// USB uart
+				usbIoManager.stop();
+				uartBufferPosition = 0;
+				uartBuffer = new byte[256];
 			}
-			socket = null;
 		}
 		connected = false;
 		rtData = null;

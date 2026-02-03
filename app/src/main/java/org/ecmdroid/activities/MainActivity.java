@@ -21,6 +21,7 @@ import android.Manifest;
 import android.app.AlertDialog;
 import android.app.Fragment;
 import android.app.FragmentManager;
+import android.app.PendingIntent;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.ComponentName;
@@ -32,6 +33,8 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
+import android.hardware.usb.UsbDeviceConnection;
+import android.hardware.usb.UsbManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
@@ -52,6 +55,11 @@ import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.hoho.android.usbserial.driver.UsbSerialDriver;
+import com.hoho.android.usbserial.driver.UsbSerialPort;
+import com.hoho.android.usbserial.driver.UsbSerialProber;
+import com.hoho.android.usbserial.util.SerialInputOutputManager;
+import org.ecmdroid.BuildConfig;
 import org.ecmdroid.Constants;
 import org.ecmdroid.DBHelper;
 import org.ecmdroid.ECM;
@@ -69,6 +77,7 @@ import org.ecmdroid.fragments.TroubleCodeFragment;
 import org.ecmdroid.task.FetchTask;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Locale;
 
 import de.kai_morich.simple_bluetooth_le_terminal.DevicesFragment;
@@ -92,6 +101,8 @@ public class MainActivity extends AppCompatActivity
 	private boolean isTransactionSafe;
 	private boolean isTransactionPending;
 
+	private UsbSerialPort port;
+	private SerialInputOutputManager usbIoManager;
 	private ServiceConnection serviceConnection = new ServiceConnection() {
 
 		public void onServiceDisconnected(ComponentName name) {
@@ -281,6 +292,40 @@ public class MainActivity extends AppCompatActivity
 		alert.show();
 	}
 
+	private void findCOMDevice() {
+		// Find all available drivers from attached devices.
+		UsbManager manager = (UsbManager) getSystemService(Context.USB_SERVICE);
+		List<UsbSerialDriver> availableDrivers = UsbSerialProber.getDefaultProber().findAllDrivers(manager);
+		if (availableDrivers.isEmpty()) {
+			Toast.makeText(MainActivity.this, "No USB COM Devices available", Toast.LENGTH_LONG).show();
+			return;
+		}
+
+		// Open a connection to the first available driver.
+		UsbSerialDriver driver = availableDrivers.get(0);
+		UsbDeviceConnection connection = manager.openDevice(driver.getDevice());
+		if (connection == null) {
+			int flags = PendingIntent.FLAG_MUTABLE;
+			Intent intent = new Intent(BuildConfig.APPLICATION_ID + ".GRANT_USB");
+			intent.setPackage(this.getPackageName());
+			PendingIntent usbPermissionIntent = PendingIntent.getBroadcast(this, 0, intent, flags);
+			manager.requestPermission(driver.getDevice(), usbPermissionIntent);
+			Toast.makeText(MainActivity.this, "Give USB Permission and try again.", Toast.LENGTH_LONG).show();
+			//TODO make this stick between runs.
+			return;
+		}
+
+		port = driver.getPorts().get(0); // Most devices have just one port (port 0)
+		//Toast.makeText(MainActivity.this, String.format(Locale.US, "Found %s",port.getDevice().getProductName()), Toast.LENGTH_SHORT).show();
+		try {
+			port.open(connection);
+			port.setParameters(9600, 8, UsbSerialPort.STOPBITS_1, UsbSerialPort.PARITY_NONE);
+			connect(port);
+        } catch (IOException e) {
+			Toast.makeText(MainActivity.this, "Could not open COM port.", Toast.LENGTH_LONG).show();
+            throw new RuntimeException(e);
+        }
+	}
 	private void disconnect() {
 		try {
 			if (ecmDroidService != null && ecmDroidService.isRecording()) {
@@ -311,6 +356,8 @@ public class MainActivity extends AppCompatActivity
 			fab.hide();
 			Fragment fragment = new DevicesFragment();
 			getFragmentManager().beginTransaction().replace(R.id.content_frame, fragment, "devices").addToBackStack("blescan").commit();
+		} else if ("COM".equals(connectionType)) {
+			findCOMDevice();
 		} else {
 			String host = prefs.getString("tcp_host", null);
 			int port = 0;
@@ -329,19 +376,22 @@ public class MainActivity extends AppCompatActivity
 
 	public void connect(BluetoothDevice bluetoothDevice) {
 		Log.i(TAG, "Device selected: " + bluetoothDevice);
-
 		new ConnectTask(bluetoothDevice, getProtocol(), false).execute();
 	}
 
 	public void connectBLE(BluetoothDevice bluetoothDevice) {
 		Log.i(TAG, "BLE Device selected: " + bluetoothDevice);
-
 		new ConnectTask(bluetoothDevice, getProtocol(), true).execute();
 	}
 
 	private void connect(String host, int port) {
 		Log.i(TAG, "TCP Connection to " + host + ":" + port);
 		new ConnectTask(host, port, getProtocol()).execute();
+	}
+
+	public void connect(UsbSerialPort uartDevice) {
+		Log.i(TAG, "Device selected: " + uartDevice);
+		new ConnectTask(uartDevice, getProtocol()).execute();
 	}
 
 	private ECM.Protocol getProtocol() {
@@ -354,11 +404,17 @@ public class MainActivity extends AppCompatActivity
 		private boolean ble;
 		private String host;
 		private int port;
+		private UsbSerialPort uart;
 
 		public ConnectTask(BluetoothDevice device, ECM.Protocol protocol, boolean ble) {
 			super(MainActivity.this);
 			this.ble = ble;
 			btDevice = device;
+			this.protocol = protocol;
+		}
+		public ConnectTask(UsbSerialPort uart, ECM.Protocol protocol) {
+			super(MainActivity.this);
+			this.uart = uart;
 			this.protocol = protocol;
 		}
 
@@ -392,7 +448,10 @@ public class MainActivity extends AppCompatActivity
 					} else {
 						ecm.connect(btDevice, protocol);
 					}
-				} else {
+				} else if (uart != null) {
+					ecm.connect(uart, protocol);
+				}
+				else {
 					ecm.connect(host, port, protocol);
 				}
 			} catch (Exception e) {
