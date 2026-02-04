@@ -40,7 +40,6 @@ import java.io.PipedOutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.text.ParseException;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.LinkedList;
@@ -529,6 +528,21 @@ public class ECM implements SerialInputOutputManager.Listener {
 			page.saved();
 			i += dtr;
 		}
+	}
+
+	/**
+	 * Write specific bytes on a single page to the EEPROM
+	 *
+	 * @param page the page to write
+	 * @throws IOException if an I/O error occurs during programming
+	 */
+	public void writeEEPromPage(Page page, int offset, int length) throws IOException {
+		//byte[] buffer = page.getParent().getBytes();
+		byte[] buffer = page.getBytes(0,page.length(), new byte[page.length()],0);
+		byte[] selectedBytes = new byte[length];
+		System.arraycopy(buffer, page.length()+offset, selectedBytes, 0, length);
+		sendPDU(PDU.setRequest(page.nr(), page.length()+offset, selectedBytes, 0, length));
+		page.saved();
 	}
 
 
