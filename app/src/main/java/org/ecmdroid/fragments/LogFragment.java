@@ -227,7 +227,7 @@ public class LogFragment extends Fragment implements OnClickListener {
 
 		docRoot = DocumentFile.fromTreeUri(getContext(), Uri.parse(uri));
 		logTimestamp = DateFormat.format("yyyyMMdd_kkmmss", System.currentTimeMillis());
-		DocumentFile f = docRoot.createFile("application/x-ecmdroid-binlog", logTimestamp.toString() + ".log"); // TODO should be .bin for backward compatibility?
+		DocumentFile f = docRoot.createFile("application/x-ecmdroid-binlog", logTimestamp.toString() + ".log");
 		logFile = getContext().getContentResolver().openFileDescriptor(f.getUri(), "rw");
 		FileOutputStream out = new FileOutputStream(logFile.getFileDescriptor());
 
