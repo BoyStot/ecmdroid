@@ -91,8 +91,16 @@ public class BurnTask extends ProgressDialogTask {
 				int count = eeprom.getPageCount();
 				for (Page pg : ecm.getEEPROM().getPages()) {
 					if (pg.nr() == 0) {
-						// TODO: We don't handle page 0 for now...
-						count--;
+						if (eeprom.getType() == ECM.Type.DDFI3) {
+							// Need to burn the AFV Front value
+							if (!fast_burn || pg.isTouched()) {
+								publishProgress(context.getString(R.string.burn_progress, ++i, count));
+								ecm.writeEEPromPage(pg,-22,2);
+								changes = true;
+							}
+						} else {
+							count--;
+						}
 						continue;
 					}
 					// Either write all pages (if no local modifications exist) or only the ones that are touched

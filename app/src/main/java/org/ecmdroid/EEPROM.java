@@ -28,6 +28,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedList;
@@ -141,6 +142,21 @@ public class EEPROM {
 		return eeprom;
 	}
 
+	private static final byte[] HEX_ARRAY = "0123456789ABCDEF".getBytes(StandardCharsets.US_ASCII);
+	public static String bytesToHex(byte[] bytes) {
+		byte[] hexChars = new byte[bytes.length * 2];
+		for (int j = 0; j < bytes.length; j++) {
+			int v = bytes[j] & 0xFF;
+			hexChars[j * 2] = HEX_ARRAY[v >>> 4];
+			hexChars[j * 2 + 1] = HEX_ARRAY[v & 0x0F];
+		}
+		String result = new String(hexChars, StandardCharsets.UTF_8);
+		ArrayList<String> split = new ArrayList<>();
+		for (int i = 0; i <= result.length() / 2; i++) {
+			split.add(result.substring(i * 2, Math.min((i + 1) * 2, result.length())));
+		}
+		return split.toString();
+	}
 	public static EEPROM load(Context context, String id, InputStream in) throws IOException {
 		ByteArrayOutputStream bytes = new ByteArrayOutputStream();
 		byte[] buffer = new byte[1024];
@@ -160,6 +176,17 @@ public class EEPROM {
 		eeprom.setBytes(data);
 		for (Page pg : eeprom.getPages()) {
 			pg.touch();
+			/*
+			if (pg.nr() == 0) {
+				// Debug only - Check if this has AFV front?
+				if (eeprom.getType() == ECM.Type.DDFI3) {
+					Log.w(TAG, "Reading Page " + pg.toString());
+					Log.w(TAG, "Writing Page Data" + bytesToHex(pg.getBytes(0,pg.length(), new byte[pg.length()],0)));
+					ECM ecm = ECM.getInstance(context);
+					ecm.writeEEPromPage(pg, -22, 2);
+				}
+			}
+			*/
 		}
 		eeprom.setEepromRead(true);
 		return eeprom;
