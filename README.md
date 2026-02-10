@@ -4,7 +4,7 @@ EcmDroid
 EcmDroid is an Android application to diagnose and configure Buell
 Motorcycles with a DDFI(-2, -3) ECM.
 
-Communication with the ECM is achieved through a Bluetooth- or BLE to
+Communication with the ECM is achieved through a Bluetooth- or BLE or USB to
 serial adapter connected to the motorcycles diagnostic plug. The plug
 is located underneath the seat (on XB-9/12 "S" models) or behind the
 front mask (on XB-9/12 "R" models).
@@ -17,6 +17,3 @@ adapters are also offered by various vendors, e.g.
 Initial pairing of your Android device and the Bluetooth serial adapter
 must be done using the Android Settings application (Wireless & Network).
 Also, make sure that BT serial adapter is set to 9600, 8N1, No Handshake.
-
-This fork adds USB serial communication using mik3y/usb-serial-for-android
-library which can be used with most EcmSPY cables.

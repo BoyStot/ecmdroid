@@ -40,7 +40,6 @@ import java.io.PipedOutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.text.ParseException;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.LinkedList;
@@ -72,22 +71,7 @@ import de.kai_morich.simple_bluetooth_le_terminal.SerialSocket;
  * data can be accessed, you must call {@link ECM#setupEEPROM()}.
  * </p>
  */
-public class ECM implements SerialInputOutputManager.Listener {
-
-	/**
-	 * SerialInputOutputManager Listener functions
-	 */
-	@Override
-	public void onNewData(byte[] data) {
-        for (byte datum : data) {
-            uartBuffer[uartBufferPosition] = datum;
-            uartBufferPosition++;
-        }
-	}
-	@Override
-	public void onRunError(Exception e) {
-		Log.w(TAG, "onNewData onRunError: " + e.getMessage());
-	}
+public class ECM {
 
 	/**
 	 * ECM Type. DDFI-1 (Tubers), DDFI-2 (XBs -2007), DDFI-3 (XB 2008-, 1125R/CR)
@@ -191,7 +175,30 @@ public class ECM implements SerialInputOutputManager.Listener {
 
 	public void connect(UsbSerialPort uart, Protocol protocol) throws IOException {
 		try {
-			usbIoManager = new SerialInputOutputManager(uart, this);
+			//final Socket s = new Socket();
+			usbIoManager = new SerialInputOutputManager(uart, new SerialInputOutputManager.Listener() {
+				/**
+				 * SerialInputOutputManager Listener functions
+				 */
+				@Override
+				public void onNewData(byte[] data) {
+					try{
+						for (byte datum : data) {
+							uartBuffer[uartBufferPosition] = datum;
+							uartBufferPosition++;
+						}
+						Log.w(TAG, "Uart input buffer position: " + uartBufferPosition);
+					} catch (ArrayIndexOutOfBoundsException e) {
+						Log.w(TAG, "Uart input buffer out of bounds.", e);
+						throw e;
+					}
+
+				}
+				@Override
+				public void onRunError(Exception e) {
+					Log.w(TAG, "onNewData onRunError: " + e.getMessage());
+				}
+			});
 			usbIoManager.start();
 			this.in = new InputStream() {
 				@Override
@@ -207,7 +214,7 @@ public class ECM implements SerialInputOutputManager.Listener {
 					System.arraycopy(uartBuffer, 0, bs, 0, len);
 					System.arraycopy(uartBuffer, len, uartBuffer, 0, 255-len);
 					uartBufferPosition-=len;
-                    System.arraycopy(bs, 0, mReceiveBuffer, off, len);
+					System.arraycopy(bs, 0, mReceiveBuffer, off, len);
 					return bs.length;
 				}
 				public int available() throws IOException {
