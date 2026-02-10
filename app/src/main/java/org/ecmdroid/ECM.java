@@ -340,7 +340,7 @@ public class ECM implements SerialInputOutputManager.Listener {
 				// USB uart
 				usbIoManager.stop();
 				uartBufferPosition = 0;
-				uartBuffer = new byte[512];
+				uartBuffer = new byte[256];
 			}
 		}
 		connected = false;
