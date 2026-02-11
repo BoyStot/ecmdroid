@@ -190,7 +190,7 @@ public class ECM {
 				}
 				@Override
 				public void onRunError(Exception e) {
-					Log.w(TAG, "onNewData onRunError: " + e.getMessage());
+					Log.e(TAG, "onNewData onRunError: " + e.getMessage());
 				}
 			});
 			this.in = new InputStream() {
