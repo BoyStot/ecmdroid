@@ -49,6 +49,7 @@ import java.util.UUID;
 import de.kai_morich.simple_bluetooth_le_terminal.SerialListener;
 import de.kai_morich.simple_bluetooth_le_terminal.SerialSocket;
 
+
 /**
  * This class represents the main interface to your Buell ECM. Communication
  * with the ECM may take place via a Bluetooth SPP adapter or TCP/IP. Functions
@@ -120,9 +121,8 @@ public class ECM {
 	private static ECM singleton;
 
 	private byte[] mReceiveBuffer = new byte[256];
-	private byte[] uartBuffer = new byte[512];
-	private int uartBufferPosition = 0;
-	SerialInputOutputManager usbIoManager;
+	private LinkedList<Object> uartBuffer;
+	private SerialInputOutputManager usbIoManager;
 	private boolean connected;
 	private Object socket;
 	private InputStream in;
@@ -175,50 +175,36 @@ public class ECM {
 
 	public void connect(UsbSerialPort uart, Protocol protocol) throws IOException {
 		try {
-			//final Socket s = new Socket();
+
 			usbIoManager = new SerialInputOutputManager(uart, new SerialInputOutputManager.Listener() {
 				/**
 				 * SerialInputOutputManager Listener functions
 				 */
 				@Override
 				public void onNewData(byte[] data) {
-					try{
-						for (byte datum : data) {
-							uartBuffer[uartBufferPosition] = datum;
-							uartBufferPosition++;
-						}
-						Log.w(TAG, "Uart input buffer position: " + uartBufferPosition);
-					} catch (ArrayIndexOutOfBoundsException e) {
-						Log.w(TAG, "Uart input buffer out of bounds.", e);
-						throw e;
-					}
-
+                    for (byte datum : data) {
+                        uartBuffer.add(datum);
+                    }
 				}
 				@Override
 				public void onRunError(Exception e) {
-					Log.w(TAG, "onNewData onRunError: " + e.getMessage());
+					Log.e(TAG, "onNewData onRunError: " + e.getMessage());
 				}
 			});
-			usbIoManager.start();
 			this.in = new InputStream() {
 				@Override
-				public int read() throws IOException {
-					byte b = uartBuffer[0];
-					System.arraycopy(uartBuffer, 1, uartBuffer, 0, 255);
-					uartBufferPosition--;
-					return b;
+				public int read() {
+					return (byte)uartBuffer.remove();
 				}
 				@Override
-				public int read(byte[] b,int off,int len) throws IOException {
-					byte[] bs = new byte[len];
-					System.arraycopy(uartBuffer, 0, bs, 0, len);
-					System.arraycopy(uartBuffer, len, uartBuffer, 0, 255-len);
-					uartBufferPosition-=len;
-					System.arraycopy(bs, 0, mReceiveBuffer, off, len);
-					return bs.length;
+				public int read(byte[] b,int off,int len) {
+					for(int i=0;i<len;i++){
+						mReceiveBuffer[off+i] = (byte)uartBuffer.remove();
+					}
+					return len;
 				}
-				public int available() throws IOException {
-					return uartBufferPosition;
+				public int available() {
+					return uartBuffer.size();
 				}
 			};
 			this.out = new OutputStream() {
@@ -231,6 +217,8 @@ public class ECM {
 					uart.write(b,2000);
 				}
 			};
+			uartBuffer = new LinkedList<>();
+			usbIoManager.start();
 		} catch (Exception e) {
 			Log.w(TAG, "Unable to connect. ", e);
 			throw e;
@@ -347,8 +335,6 @@ public class ECM {
 			} else {
 				// USB uart
 				usbIoManager.stop();
-				uartBufferPosition = 0;
-				uartBuffer = new byte[512];
 			}
 		}
 		connected = false;
@@ -388,6 +374,7 @@ public class ECM {
 		try {
 			read(mReceiveBuffer, 0, 6, DEFAULT_TIMEOUT);
 			if (mReceiveBuffer[0] != PDU.SOH && mReceiveBuffer[4] != PDU.EOH && mReceiveBuffer[5] != PDU.SOT) {
+
 				throw new IOException("Invalid Header received.");
 			}
 			int len = mReceiveBuffer[3] & 0xff;
