@@ -121,8 +121,6 @@ public class ECM {
 	private static ECM singleton;
 
 	private byte[] mReceiveBuffer = new byte[256];
-	//private byte[] uartBuffer = new byte[512];
-	//private BlockingQueue<byte[]> uartBuffer = new LinkedBlockingQueue<>();
 	private LinkedList<Object> uartBuffer;
 	private SerialInputOutputManager usbIoManager;
 	private boolean connected;
