@@ -17,20 +17,20 @@
  */
 package org.ecmdroid;
 
-import android.support.test.runner.AndroidJUnit4;
-
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import static android.support.test.InstrumentationRegistry.getContext;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+
+import androidx.test.core.app.ApplicationProvider;
+import androidx.test.ext.junit.runners.AndroidJUnit4;
 
 @RunWith(AndroidJUnit4.class)
 public class TestEEPROM {
 	@Test
 	public void testVersion() {
-		EEPROM eeprom = EEPROM.get("BUEIB310 10-11-03", getContext());
+		EEPROM eeprom = EEPROM.get("BUEIB310 10-11-03", ApplicationProvider.getApplicationContext());
 		assertNotNull(eeprom);
 		assertEquals(7, eeprom.getPageCount());
 		assertEquals(1206, eeprom.getPage(0).start());

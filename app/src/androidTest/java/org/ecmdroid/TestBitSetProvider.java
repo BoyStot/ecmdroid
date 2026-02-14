@@ -17,8 +17,6 @@
  */
 package org.ecmdroid;
 
-import android.support.test.runner.AndroidJUnit4;
-
 import org.ecmdroid.Constants.DataSource;
 import org.junit.Before;
 import org.junit.Test;
@@ -26,9 +24,11 @@ import org.junit.runner.RunWith;
 
 import java.io.IOException;
 
-import static android.support.test.InstrumentationRegistry.getContext;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+
+import androidx.test.core.app.ApplicationProvider;
+import androidx.test.ext.junit.runners.AndroidJUnit4;
 
 
 @RunWith(AndroidJUnit4.class)
@@ -37,7 +37,7 @@ public class TestBitSetProvider {
 
 	@Before
 	public void setUp() {
-		p = BitSetProvider.getInstance(getContext());
+		p = BitSetProvider.getInstance(ApplicationProvider.getApplicationContext());
 	}
 
 	 @Test

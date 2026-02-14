@@ -17,8 +17,6 @@
  */
 package org.ecmdroid;
 
-import android.support.test.runner.AndroidJUnit4;
-
 import org.ecmdroid.Variable.DataType;
 import org.junit.Before;
 import org.junit.Test;
@@ -27,12 +25,14 @@ import org.junit.runner.RunWith;
 import java.io.IOException;
 import java.util.Collection;
 
-import static android.support.test.InstrumentationRegistry.getContext;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+
+import androidx.test.core.app.ApplicationProvider;
+import androidx.test.ext.junit.runners.AndroidJUnit4;
 
 
 @RunWith(AndroidJUnit4.class)
@@ -40,8 +40,8 @@ public class TestVariableProvider{
 	private VariableProvider provider;
 
 	@Before
-	public void setUp() throws Exception {
-		provider = VariableProvider.getInstance(getContext());
+	public void setUp() {
+		provider = VariableProvider.getInstance(ApplicationProvider.getApplicationContext());
 	}
 
 	@Test
@@ -81,13 +81,13 @@ public class TestVariableProvider{
 		assertEquals(2, v.getSize());
 		assertEquals(23, v.getOffset());
 		assertEquals("Milliseconds", v.getUnit());
-		assertEquals(0.001330, v.getScale());
-		assertEquals(0.0, v.getTranslate());
+		assertEquals(0.001330, v.getScale(), 0.000001);
+		assertEquals(0.0, v.getTranslate(), 0.1);
 		assertEquals("Fuel Pulsewidth Rear", v.getLabel());
 		assertEquals("0.00", v.getFormat());
-		assertEquals(0.0, v.getLow());
-		assertEquals(0.1159248615, v.getHigh());
-		assertEquals(0, v.getUlow());
+		assertEquals(0.0, v.getLow(), 0.1);
+		assertEquals(0.1159248615, v.getHigh(), 0.01);
+		assertEquals(0, v.getUlow(), 0.1);
 		assertEquals(65535, v.getUhigh());
 	}
 
@@ -154,7 +154,7 @@ public class TestVariableProvider{
 		byte[] eeprom = TestUtils.readEEPROM();
 		Variable var = provider.getEEPROMVariable("BUEIB", "Tab_Fuel_Load_Ax");
 		assertNotNull(var);
-		assertEquals(var.getType(), DataType.AXIS);
+		assertEquals(DataType.AXIS, var.getType());
 		var.refreshValue(eeprom);
 		assertEquals(12, var.getSize());
 		assertEquals(1, var.getWidth());
@@ -168,12 +168,12 @@ public class TestVariableProvider{
 		try {
 			var.getIntValueAt(expected.length);
 			fail("ArrayIndexOutOfBoundsException expected.");
-		} catch (ArrayIndexOutOfBoundsException e) {
+		} catch (ArrayIndexOutOfBoundsException ignored) {
 		}
 
 		var = provider.getEEPROMVariable("BUEIB", "Tab_Fuel_RPM_Ax");
 		assertNotNull(var);
-		assertEquals(var.getType(), DataType.AXIS);
+		assertEquals(DataType.AXIS, var.getType());
 		var.refreshValue(eeprom);
 		assertEquals(26, var.getSize());
 		assertEquals(2, var.getWidth());
@@ -187,7 +187,7 @@ public class TestVariableProvider{
 		try {
 			var.getIntValueAt(expected.length);
 			fail("ArrayIndexOutOfBoundsException expected.");
-		} catch (ArrayIndexOutOfBoundsException e) {
+		} catch (ArrayIndexOutOfBoundsException ignored) {
 		}
 	}
 
@@ -196,7 +196,7 @@ public class TestVariableProvider{
 		byte[] eeprom = TestUtils.readEEPROM();
 		Variable var = provider.getEEPROMVariable("BUEIB", "Tab_ABP_Conv");
 		assertNotNull(var);
-		assertEquals(var.getType(), DataType.TABLE);
+		assertEquals(DataType.TABLE, var.getType());
 		assertEquals(5, var.getRows());
 		assertEquals(2, var.getCols());
 		var.refreshValue(eeprom);
@@ -210,7 +210,7 @@ public class TestVariableProvider{
 		try {
 			var.getFormattedValueAt(expected.length + 1, expected[0].length + 1);
 			fail("ArrayIndexOutOfBoundsException expected.");
-		} catch (ArrayIndexOutOfBoundsException e) {
+		} catch (ArrayIndexOutOfBoundsException ignored) {
 		}
 
 		var.parseValueAt(0, 0, 42);

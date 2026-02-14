@@ -17,8 +17,6 @@
  */
 package org.ecmdroid;
 
-import android.support.test.runner.AndroidJUnit4;
-
 import org.ecmdroid.Error.ErrorType;
 import org.junit.Before;
 import org.junit.Test;
@@ -27,8 +25,10 @@ import org.junit.runner.RunWith;
 import java.io.IOException;
 import java.util.Collection;
 
-import static android.support.test.InstrumentationRegistry.getContext;
 import static org.junit.Assert.assertEquals;
+
+import androidx.test.core.app.ApplicationProvider;
+import androidx.test.ext.junit.runners.AndroidJUnit4;
 
 
 @RunWith(AndroidJUnit4.class)
@@ -39,8 +39,8 @@ public class TestECM{
 	public void setUp() throws Exception {
 		byte[] epd = TestUtils.readEEPROM();
 		byte[] rtd = TestUtils.readRTData();
-		ecm = ECM.getInstance(getContext());
-		EEPROM eeprom = EEPROM.get("BUEIB", getContext());
+		ecm = ECM.getInstance(ApplicationProvider.getApplicationContext());
+		EEPROM eeprom = EEPROM.get("BUEIB", ApplicationProvider.getApplicationContext());
 		ecm.setEEPROM(eeprom);
 		ecm.setRuntimeData(rtd);
 		System.arraycopy(epd, 0, eeprom.getBytes(), 0, epd.length);

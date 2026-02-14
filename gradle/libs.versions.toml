@@ -1,6 +1,23 @@
 [versions]
 agp = "8.13.2"
+junit = "4.13.2"
+junitExt = "1.3.0"
+espressoCore = "3.7.0"
+appcompat = "1.7.1"
+material = "1.13.0"
+drawerlayout = "1.2.0"
+documentfile = "1.1.0"
+usbSerial =  "3.9.0"
+
+[libraries]
+appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
+drawerlayout = { group = "androidx.drawerlayout", name = "drawerlayout", version.ref = "drawerlayout" }
+documentfile = { group = "androidx.documentfile", name = "documentfile", version.ref = "documentfile" }
+material = { group = "com.google.android.material", name = "material", version.ref = "material" }
+usbserial = { group= "com.github.mik3y", name = "usb-serial-for-android", version.ref = "usbSerial"}
+junit = { group = "junit", name = "junit", version.ref = "junit" }
+ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitExt" }
+espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
-

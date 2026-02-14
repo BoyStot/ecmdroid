@@ -17,14 +17,13 @@
  */
 package org.ecmdroid;
 
-import android.support.test.runner.AndroidJUnit4;
 import android.util.Log;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
-import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 
 import static org.junit.Assert.assertEquals;
@@ -35,18 +34,18 @@ import static org.junit.Assert.assertTrue;
 @RunWith(JUnit4.class)
 public class TestPDU {
 	@Test
-	public void testVersionParsing() throws ParseException, UnsupportedEncodingException {
+	public void testVersionParsing() throws ParseException {
 		byte[] data = new byte[]{0x01, 0x42, 0x00, 0x13, (byte) 0xFF, 0x02, 0x06, 0x42, 0x55, 0x45, 0x49, 0x42, 0x33, 0x31, 0x30, 0x20, 0x31, 0x32, 0x2D, 0x31, 0x31, 0x2D, 0x30, 0x33, 0x03, (byte) 0xE2};
 		PDU pdu = new PDU(data, data.length);
 		assertFalse(pdu.isRequest());
 		assertTrue(pdu.isResponse());
 		assertTrue(pdu.isACK());
-		assertEquals(pdu.getSender(), PDU.STOCK_ECM_ID);
-		assertEquals("BUEIB310 12-11-03", new String(pdu.getEEPromData(), "US-ASCII"));
+		assertEquals(PDU.STOCK_ECM_ID, pdu.getSender());
+		assertEquals("BUEIB310 12-11-03", new String(pdu.getEEPromData(), StandardCharsets.US_ASCII));
 	}
 
 	@Test
-	public void testSetRequest() throws UnsupportedEncodingException {
+	public void testSetRequest() {
 		byte[] payload = "TestMe".getBytes();
 		PDU pdu = PDU.setRequest(0x42, 0x24, payload, 0, payload.length);
 		Log.d("TestPDU", pdu.toString());
@@ -55,7 +54,7 @@ public class TestPDU {
 		assertFalse(pdu.isACK());
 		assertEquals(0x42, pdu.getPageNr());
 		assertEquals(0x24, pdu.getPageOffset());
-		assertEquals("TestMe", new String(pdu.getEEPromData(), "US-ASCII"));
+		assertEquals("TestMe", new String(pdu.getEEPromData(), StandardCharsets.US_ASCII));
 	}
 
 	@Test

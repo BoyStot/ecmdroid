@@ -29,13 +29,14 @@ import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 import android.os.Bundle;
 import android.os.IBinder;
-import android.support.annotation.Nullable;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ListView;
 import android.widget.ToggleButton;
+
+import androidx.annotation.Nullable;
 
 import org.ecmdroid.Constants.Variables;
 import org.ecmdroid.DataChannelAdapter;
