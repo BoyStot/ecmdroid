@@ -121,7 +121,6 @@ public class ECM {
 	private static ECM singleton;
 
 	private byte[] mReceiveBuffer = new byte[256];
-	private LinkedList<Object> uartBuffer;
 	private SerialInputOutputManager usbIoManager;
 	private boolean connected;
 	private Object socket;
@@ -176,51 +175,39 @@ public class ECM {
 	public void connect(UsbSerialPort uart, Protocol protocol) throws IOException {
 		try {
 
+			final PipedOutputStream uartOutPipe = new PipedOutputStream();
+			this.in = new PipedInputStream(uartOutPipe);
 			usbIoManager = new SerialInputOutputManager(uart, new SerialInputOutputManager.Listener() {
 				/**
 				 * SerialInputOutputManager Listener functions
 				 */
 				@Override
 				public void onNewData(byte[] data) {
-                    for (byte datum : data) {
-                        uartBuffer.add(datum);
+					try {
+						uartOutPipe.write(data);
+					} catch (IOException e) {
+						Log.e(TAG, "IO Exception while trying to write to UART", e);
+						throw new RuntimeException(e);
                     }
 				}
 				@Override
 				public void onRunError(Exception e) {
-					Log.e(TAG, "onNewData onRunError: " + e.getMessage());
+					Log.e(TAG, "UART read/write run error", e);
 				}
 			});
-			this.in = new InputStream() {
-				@Override
-				public int read() {
-					return (byte)uartBuffer.remove();
-				}
-				@Override
-				public int read(byte[] b,int off,int len) {
-					for(int i=0;i<len;i++){
-						mReceiveBuffer[off+i] = (byte)uartBuffer.remove();
-					}
-					return len;
-				}
-				public int available() {
-					return uartBuffer.size();
-				}
-			};
 			this.out = new OutputStream() {
 				@Override
 				public void write(int i) throws IOException {
-					uart.write(new byte[]{(byte) i},2000);
+					write(new byte[]{(byte) i});
 				}
 				@Override
 				public void write(byte[] b) throws IOException {
 					uart.write(b,2000);
 				}
 			};
-			uartBuffer = new LinkedList<>();
 			usbIoManager.start();
 		} catch (Exception e) {
-			Log.w(TAG, "Unable to connect. ", e);
+			Log.w(TAG, "Unable to connect to USB UART", e);
 			throw e;
 		}
 		this.protocol = protocol;
@@ -323,7 +310,9 @@ public class ECM {
 	 */
 	public void disconnect() throws IOException {
 		if (connected) {
+			try {
 			if(socket != null){
+					try {
 				if (socket instanceof BluetoothSocket) {
 					((BluetoothSocket) socket).close();
 				} else if (socket instanceof Socket) {
@@ -331,14 +320,26 @@ public class ECM {
 				} else if (socket instanceof SerialSocket) {
 					((SerialSocket)socket).disconnect();
 				}
+					} finally {
 				socket = null;
+					}
 			} else {
 				// USB uart
+					try {
+						if (usbIoManager != null) {
 				usbIoManager.stop();
 			}
+					} finally {
+						usbIoManager = null;
 		}
+				}
+			} finally {
+				this.in = null;
+				this.out = null;
 		connected = false;
 		rtData = null;
+			}
+		}
 	}
 
 	/**
