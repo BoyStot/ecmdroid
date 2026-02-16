@@ -27,7 +27,10 @@ import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
+import android.content.pm.PackageManager;
+import android.Manifest;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.ParcelFileDescriptor;
@@ -46,6 +49,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
+import androidx.core.app.ActivityCompat;
 import androidx.documentfile.provider.DocumentFile;
 
 import org.ecmdroid.Constants.Variables;
@@ -197,6 +201,13 @@ public class LogFragment extends Fragment implements OnClickListener {
 		// Start recording...
 		if (ecmDroidService != null) {
 			if (!ecm.isRecording()) {
+				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+					if (ActivityCompat.checkSelfPermission(getActivity(), Manifest.permission.POST_NOTIFICATIONS)
+							!= PackageManager.PERMISSION_GRANTED) {
+						requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 1);
+						return;
+					}
+				}
 				try {
 					startRecording();
 				} catch (IOException e) {
