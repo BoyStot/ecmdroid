@@ -28,7 +28,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedList;
@@ -141,22 +140,7 @@ public class EEPROM {
 		}
 		return eeprom;
 	}
-
-	private static final byte[] HEX_ARRAY = "0123456789ABCDEF".getBytes(StandardCharsets.US_ASCII);
-	public static String bytesToHex(byte[] bytes) {
-		byte[] hexChars = new byte[bytes.length * 2];
-		for (int j = 0; j < bytes.length; j++) {
-			int v = bytes[j] & 0xFF;
-			hexChars[j * 2] = HEX_ARRAY[v >>> 4];
-			hexChars[j * 2 + 1] = HEX_ARRAY[v & 0x0F];
-		}
-		String result = new String(hexChars, StandardCharsets.UTF_8);
-		ArrayList<String> split = new ArrayList<>();
-		for (int i = 0; i <= result.length() / 2; i++) {
-			split.add(result.substring(i * 2, Math.min((i + 1) * 2, result.length())));
-		}
-		return split.toString();
-	}
+	
 	public static EEPROM load(Context context, String id, InputStream in) throws IOException {
 		ByteArrayOutputStream bytes = new ByteArrayOutputStream();
 		byte[] buffer = new byte[1024];
