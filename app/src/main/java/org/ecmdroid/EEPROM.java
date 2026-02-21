@@ -160,17 +160,6 @@ public class EEPROM {
 		eeprom.setBytes(data);
 		for (Page pg : eeprom.getPages()) {
 			pg.touch();
-			/*
-			if (pg.nr() == 0) {
-				// Debug only - Check if this has AFV front?
-				if (eeprom.getType() == ECM.Type.DDFI3) {
-					Log.w(TAG, "Reading Page " + pg.toString());
-					Log.w(TAG, "Writing Page Data" + bytesToHex(pg.getBytes(0,pg.length(), new byte[pg.length()],0)));
-					ECM ecm = ECM.getInstance(context);
-					ecm.writeEEPromPage(pg, -22, 2);
-				}
-			}
-			*/
 		}
 		eeprom.setEepromRead(true);
 		return eeprom;

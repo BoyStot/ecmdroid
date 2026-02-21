@@ -533,11 +533,16 @@ public class ECM {
 	 * @throws IOException if an I/O error occurs during programming
 	 */
 	public void writeEEPromPage(Page page, int offset, int length) throws IOException {
-		//byte[] buffer = page.getParent().getBytes();
 		byte[] buffer = page.getBytes(0,page.length(), new byte[page.length()],0);
 		byte[] selectedBytes = new byte[length];
-		System.arraycopy(buffer, page.length()+offset, selectedBytes, 0, length);
-		sendPDU(PDU.setRequest(page.nr(), page.length()+offset, selectedBytes, 0, length));
+		if(page.nr() == 0){
+			// Page 0 starts at FF (+1 to inc zero) then uses negative offset.
+			System.arraycopy(buffer, buffer.length+offset, selectedBytes, 0, length);
+			offset+=256; // Update for PDU
+		} else {
+			System.arraycopy(buffer, offset, selectedBytes, 0, length);
+		}
+		sendPDU(PDU.setRequest(page.nr(), offset, selectedBytes, 0, length));
 		page.saved();
 	}
 
