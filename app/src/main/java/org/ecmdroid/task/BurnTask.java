@@ -92,13 +92,21 @@ public class BurnTask extends ProgressDialogTask {
 				for (Page pg : ecm.getEEPROM().getPages()) {
 					if (pg.nr() == 0) {
 						if (eeprom.getType() == ECM.Type.DDFI3) {
-							// Need to burn the AFV Front value
 							if (!fast_burn || pg.isTouched()) {
+								// Burn the AFV Front value.
 								publishProgress(context.getString(R.string.burn_progress, ++i, count));
 								ecm.writeEEPromPage(pg,-22,2);
 								changes = true;
 							}
+						} else if (eeprom.getType() == ECM.Type.DDFI2) {
+							if (!fast_burn || pg.isTouched()) {
+								// Can burn the Baro parameter to match local value on bikes with no MAP.
+								publishProgress(context.getString(R.string.burn_progress, ++i, count));
+								ecm.writeEEPromPage(pg,-2,1);
+								changes = true;
+							}
 						} else {
+							// Ignore the page.
 							count--;
 						}
 						continue;
