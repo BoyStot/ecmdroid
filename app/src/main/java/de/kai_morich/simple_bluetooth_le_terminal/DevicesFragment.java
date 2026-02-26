@@ -29,8 +29,8 @@ import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
 
-import org.ecmdroid.R;
-import org.ecmdroid.fragments.MainFragment;
+import org.ecmdroidebug.R;
+import org.ecmdroidebug.fragments.MainFragment;
 
 import java.util.ArrayList;
 import java.util.Collections;

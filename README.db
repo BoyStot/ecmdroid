@@ -20,5 +20,5 @@ to sqlite3:
 5. Compress the resulting db file with gzip, replacing the current version
   $ gzip -f assets/ecmdroid.db
 
-6. Increase the DB version field in class org.ecmdroid.DBHelper
+6. Increase the DB version field in class org.ecmdroidebug.DBHelper
 

@@ -14,7 +14,7 @@ LOCAL=$(if head=`git rev-parse --verify HEAD 2>/dev/null`; then
 fi)
 
 cat <<EOF
-package org.ecmdroid;
+package org.ecmdroidebug;
 
 /* Generated Class */
 public interface VCS
