@@ -91,8 +91,23 @@ public class BurnTask extends ProgressDialogTask {
 				int count = eeprom.getPageCount();
 				for (Page pg : ecm.getEEPROM().getPages()) {
 					if (pg.nr() == 0) {
-						// TODO: We don't handle page 0 for now...
-						count--;
+						// Added for DDFI-3 AFV Front value.
+						if (eeprom.getType() == ECM.Type.DDFI3) {
+							if (!fast_burn || pg.isTouched()) {
+								publishProgress(context.getString(R.string.burn_progress, ++i, count));
+								ecm.writeEEPromPage(pg,-22,2);
+								changes = true;
+							}
+						} else if (eeprom.getType() == ECM.Type.DDFI2) {
+							// Added to allow Baro setting on DDFI-2 Bikes with no MAP sensor. Could be used to set with phone Baro sensor in the future?
+							if (!fast_burn || pg.isTouched()) {
+								publishProgress(context.getString(R.string.burn_progress, ++i, count));
+								ecm.writeEEPromPage(pg,-2,1);
+								changes = true;
+							}
+						} else {
+							count--;
+						}
 						continue;
 					}
 					// Either write all pages (if no local modifications exist) or only the ones that are touched
