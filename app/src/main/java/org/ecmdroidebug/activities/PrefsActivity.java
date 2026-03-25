@@ -20,6 +20,9 @@ package org.ecmdroidebug.activities;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.icu.text.DateFormat;
+import android.icu.text.SimpleDateFormat;
+import android.icu.util.Calendar;
 import android.net.Uri;
 import android.os.Bundle;
 import android.preference.EditTextPreference;
@@ -34,11 +37,17 @@ import android.view.Menu;
 import org.ecmdroidebug.R;
 import org.ecmdroidebug.Utils;
 
+import java.util.Date;
+import java.util.Locale;
+import java.util.Objects;
+
 /**
  * Application Preferences
  */
 public class PrefsActivity extends PreferenceActivity implements OnPreferenceChangeListener {
 	private static final int STORAGE_LOCATION = 1;
+	private Preference onlinelog;
+	private Preference onlinelogpass;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -61,8 +70,20 @@ public class PrefsActivity extends PreferenceActivity implements OnPreferenceCha
 		txt.setSummary(txt.getText());
 		txt.setOnPreferenceChangeListener(this);
 
+		onlinelogpass = findPreference("log_online_pass");
+		onlinelogpass.setOnPreferenceChangeListener(this);
+
 		Preference storage = findPreference("storage_location");
 		SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+		SharedPreferences.Editor editor = prefs.edit();
+
+		onlinelog = findPreference("log_online");
+		onlinelog.setEnabled(false);
+		editor.putBoolean("log_online", false);
+		editor.commit();
+		onlinelog.setOnPreferenceChangeListener(this);
+		getPreferenceScreen().removePreference(onlinelog);
+
 		String storageLocation = prefs.getString("storage.location", null);
 		storage.setSummary(storageLocation == null ? getString(R.string.setup_storage_hint) : Uri.parse(storageLocation).getLastPathSegment());
 		storage.setOnPreferenceClickListener(preference -> {
@@ -85,7 +106,7 @@ public class PrefsActivity extends PreferenceActivity implements OnPreferenceCha
 					SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
 					SharedPreferences.Editor editor = prefs.edit();
 					editor.putString("storage.location", uri.toString());
-					editor.apply();
+					editor.commit();
 					Preference storage = findPreference("storage_location");
 					storage.setSummary(uri.getLastPathSegment());
 				}
@@ -106,7 +127,37 @@ public class PrefsActivity extends PreferenceActivity implements OnPreferenceCha
 			boolean tcp = getString(R.string.prefs_tcp_connection).equals(newValue);
 			findPreference("tcp_host").setEnabled(tcp);
 			findPreference("tcp_port").setEnabled(tcp);
-		} else {
+		} else if(preference.getKey().equals("log_online_pass")){
+			// Check and activate logonline.
+			String date1 = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
+			String md51 = Utils.md5(date1); // 2026-02-26 = 40101526bfeb6f95bd7ee528cc8bffe0
+
+			DateFormat date2 = new SimpleDateFormat("yyyy-MM-dd");
+			Calendar cal = Calendar.getInstance();
+			cal.add(Calendar.DATE, -1);
+			String md52 = Utils.md5(date2.format(cal.getTime())); // 2026-02-25 = b6ac0d4942dd01963c118e089639b4f6
+			if(md51.substring(0, 8).equals(newValue) || md52.substring(0, 8).equals(newValue)){
+				getPreferenceScreen().addPreference(onlinelog);
+				onlinelog.setEnabled(true);
+				SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+				SharedPreferences.Editor editor = prefs.edit();
+				editor.putString("log_online_pass", "");
+				editor.commit();
+				getPreferenceScreen().removePreference(onlinelogpass);
+				return false;
+			}
+		} else if(preference.getKey().equals("log_online")){
+			if(!(boolean)newValue){
+				onlinelog.setEnabled(false);
+				getPreferenceScreen().addPreference(onlinelogpass);
+				SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+				SharedPreferences.Editor editor = prefs.edit();
+				editor.putString("log_online_pass", "");
+				editor.commit();
+				getPreferenceScreen().removePreference(onlinelog);
+				return false;
+			}
+		} else  {
 			preference.setSummary(newValue == null ? "" : newValue.toString());
 		}
 		return true;

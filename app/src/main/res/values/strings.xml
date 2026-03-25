@@ -241,6 +241,7 @@
 	<string name="log_extension_title">Log Extension</string>
 	<string name="log_online_summary">Check this to send logs to online area for debug.</string>
 	<string name="log_online_title">Log Online?</string>
+	<string name="log_online_password">Unlock Log Online</string>
 	<string name="ecm_version">ECM Version:</string>
 	<string name="update_db">Updating database...</string>
     <string name="pairing_request"><![CDATA[PAIRING requested\n-> Perform pairing steps. Connect again]]></string>

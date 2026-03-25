@@ -54,9 +54,14 @@
 		android:key="keep_screen_on"
 		android:title="@string/keep_screen_on_title"
 		android:summary="@string/keep_screen_on_summary"/>
+	<EditTextPreference
+		android:defaultValue=""
+		android:key="log_online_pass"
+		android:title="@string/log_online_password" />
 	<SwitchPreference
 		android:key="log_online"
 		android:defaultValue="false"
 		android:title="@string/log_online_title"
-		android:summary="@string/log_online_summary"/>
+		android:summary="@string/log_online_summary"
+		android:visibility="invisible"/>
 </PreferenceScreen>

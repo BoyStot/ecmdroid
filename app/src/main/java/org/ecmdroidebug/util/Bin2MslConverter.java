@@ -68,6 +68,7 @@ public class Bin2MslConverter extends Observable {
 		int offsFlags2 = 0;
 		int offsAccel = 0;
 		int offsWUE = 0;
+		int offsTPD = 0;
 		int rc = 0;
 		int category = 0;
 		int rtLen = 0;
@@ -234,6 +235,7 @@ public class Bin2MslConverter extends Observable {
 					} else if (fields[17].equals("WUE")) {
 						offsWUE = Integer.parseInt(fields[7], 10);
 					} else if (fields[17].equals("TPS deg.") || fields[17].equals("TPD")) {
+						offsTPD = Integer.parseInt(fields[7], 10);
 					}
 
 					numRecord++;
@@ -258,6 +260,7 @@ public class Bin2MslConverter extends Observable {
 			for (i = 0; i < alExport.size(); i++) {
 				mslFile.print("\t" + alExport.get(i));
 			}
+			mslFile.print("\t" + "TPS"); // Add 0-255 TPS field for MLV.
 			mslFile.print("\r\n");
 
 			long start = System.currentTimeMillis();
@@ -398,6 +401,7 @@ public class Bin2MslConverter extends Observable {
 
 					rt.append('\t').append(engine);               // engine byte
 
+					int tps = 0;
 					// runtime data
 					for (i = 0; i < alOffset.size(); i++) {
 						int o = alOffset.get(i);
@@ -410,6 +414,8 @@ public class Bin2MslConverter extends Observable {
 							iVal += rtBuffer[o + 1] * 256;
 						}
 
+
+
 						fVal = iVal;
 						fVal *= alScale.get(i);
 						fVal += alTranslate.get(i);
@@ -421,7 +427,12 @@ public class Bin2MslConverter extends Observable {
 						} else {
 							rt.append(df.format(fVal));
 						}
+						if(o == offsTPD){
+							tps = (int) (fVal*3);
+						}
 					}
+
+					rt.append('\t').append(tps);
 					rt.append("\r\n");
 					mslFile.append(rt);
 					numRecord++;

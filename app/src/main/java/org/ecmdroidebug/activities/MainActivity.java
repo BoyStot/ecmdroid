@@ -153,6 +153,12 @@ public class MainActivity extends AppCompatActivity
 
 		((TextView) navigationView.getHeaderView(0).findViewById(R.id.headerTitle)).setText(Utils.getAppVersion(this));
 
+		// turn off Online debug
+		SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+		SharedPreferences.Editor editor = prefs.edit();
+		editor.putBoolean("log_online", false);
+		editor.commit();
+
 		// Bind to our service and setup the connect button
 		bindService(new Intent(this, EcmDroidService.class), serviceConnection, Context.BIND_AUTO_CREATE);
 		startService(new Intent(this, EcmDroidService.class));
