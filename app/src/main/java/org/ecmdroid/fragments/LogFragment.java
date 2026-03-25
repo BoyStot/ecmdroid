@@ -72,6 +72,7 @@ public class LogFragment extends Fragment implements OnClickListener {
 	private static final String PREFS_CONVERTLOG = "convertlog";
 	private static final String PREFS_DELAY = "delay";
 	private static final String PREFS_KEEP_SCREEN_ON = "keep_screen_on";
+	private static final String PREFS_LOG_EXTENSION = "log_extension";
 	private static final String TAG = "LogFragment";
 	private Button recordButton;
 	private TextView logStatus;
@@ -239,7 +240,7 @@ public class LogFragment extends Fragment implements OnClickListener {
 
 		docRoot = DocumentFile.fromTreeUri(getContext(), Uri.parse(uri));
 		logTimestamp = DateFormat.format("yyyyMMdd_kkmmss", System.currentTimeMillis());
-		DocumentFile f = docRoot.createFile("application/x-ecmdroid-binlog", logTimestamp.toString() + ".log");
+		DocumentFile f = docRoot.createFile("application/x-ecmdroid-binlog", logTimestamp.toString() + "." + prefs.getString(PREFS_LOG_EXTENSION, "log")); // Allow .log or .bin depending on prefs choice.  Too far?
 		logFile = getContext().getContentResolver().openFileDescriptor(f.getUri(), "rw");
 		FileOutputStream out = new FileOutputStream(logFile.getFileDescriptor());
 

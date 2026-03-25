@@ -12,4 +12,12 @@
 		<item>TCP</item>
 		<item>COM</item>
 	</array>
+	<array name="logExtensionTypes">
+		<item>.log</item>
+		<item>.bin</item>
+	</array>
+	<array name="logExtensionValues">
+		<item>log</item>
+		<item>bin</item>
+	</array>
 </resources>

@@ -8,6 +8,13 @@
 		android:singleLine="true"
 		android:title="@string/storage_location" />
 	<ListPreference
+		android:defaultValue="@string/prefs_log_extension"
+		android:entries="@array/logExtensionTypes"
+		android:entryValues="@array/logExtensionValues"
+		android:key="log_extension"
+		android:title="@string/log_extension_title"
+		android:summary="@string/log_extension_summary" />
+	<ListPreference
 		android:defaultValue="@string/prefs_bt_connection"
 		android:entries="@array/connectionTypes"
 		android:entryValues="@array/connectionValues"
