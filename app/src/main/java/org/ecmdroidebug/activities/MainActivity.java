@@ -64,6 +64,7 @@ import org.ecmdroidebug.Constants;
 import org.ecmdroidebug.DBHelper;
 import org.ecmdroidebug.ECM;
 import org.ecmdroidebug.EcmDroidService;
+import org.ecmdroidebug.PDU;
 import org.ecmdroidebug.R;
 import org.ecmdroidebug.Utils;
 import org.ecmdroidebug.fragments.ActiveTestsFragment;
@@ -325,7 +326,8 @@ public class MainActivity extends AppCompatActivity
 		//Toast.makeText(MainActivity.this, String.format(Locale.US, "Found %s",port.getDevice().getProductName()), Toast.LENGTH_SHORT).show();
 		try {
 			port.open(connection);
-			port.setParameters(9600, 8, UsbSerialPort.STOPBITS_1, UsbSerialPort.PARITY_NONE);
+			int baud = (PDU.getECMID() == PDU.STOCK_ECM_ID) ? 9600 : 19200;
+			port.setParameters(baud, 8, UsbSerialPort.STOPBITS_1, UsbSerialPort.PARITY_NONE);
 			connect(port);
         } catch (IOException e) {
 			Toast.makeText(MainActivity.this, "Could not open COM port.", Toast.LENGTH_LONG).show();
